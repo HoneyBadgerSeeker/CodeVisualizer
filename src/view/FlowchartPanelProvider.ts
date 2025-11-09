@@ -170,8 +170,8 @@ export class FlowchartPanelProvider extends BaseFlowchartProvider {
 
     // Show a helpful notification
     const message = moveToNewWindow
-      ? "📊 Flowchart opened in new window! Use Cmd+W to close or drag to reposition."
-      : "📊 Flowchart opened in detachable panel! You can drag this tab to split views or different positions.";
+      ? "Flowchart opened in new window! Use Cmd+W to close or drag to reposition."
+      : "Flowchart opened in detachable panel! You can drag this tab to split views or different positions.";
 
     vscode.window.showInformationMessage(message, "Got it");
   }
@@ -201,7 +201,7 @@ export class FlowchartPanelProvider extends BaseFlowchartProvider {
       console.warn("Could not move panel to new window:", error);
       // Fallback: show notification with manual instructions
       vscode.window.showInformationMessage(
-        "💡 To move to a separate window: Right-click the tab → 'Move into New Window' or drag the tab out of VS Code",
+        "To move to a separate window: Right-click the tab → 'Move into New Window' or drag the tab out of VS Code",
         "Got it"
       );
     }

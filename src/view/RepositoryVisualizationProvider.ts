@@ -125,7 +125,9 @@ export class RepositoryVisualizationProvider {
   }
 
   private setWebviewContent(repositoryData?: RepositoryNode): void {
-    if (!this._panel) return;
+    if (!this._panel) {
+      return;
+    }
 
     const nonce = this.getNonce();
     const theme =
@@ -192,10 +194,6 @@ export class RepositoryVisualizationProvider {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
-        }
-
-        .control-btn.paused {
-            background-color: #f59e0b;
         }
 
         .control-btn {
@@ -317,10 +315,8 @@ export class RepositoryVisualizationProvider {
 <body>
         <div id="container">
         <div id="controls">
-            <button class="control-btn" id="pause-resume">⏸️ Pause</button>
-            <button class="control-btn" id="restart">🔄 Restart</button>
-            <button class="control-btn" id="reset-view">🎯 Reset View</button>
-            <button class="control-btn" id="toggle-labels">📝 Toggle Labels</button>
+            <button class="control-btn" id="reset-view">Reset View</button>
+            <button class="control-btn" id="toggle-labels">Toggle Labels</button>
         </div>
         <div id="tooltip"></div>
         <svg id="visualization"></svg>
@@ -786,13 +782,6 @@ export class RepositoryVisualizationProvider {
                     });
                     // Stop simulation
                     simulation.stop();
-                    
-                    // Update pause button state
-                    const pauseResumeBtn = document.getElementById("pause-resume");
-                    if (pauseResumeBtn) {
-                        pauseResumeBtn.textContent = "▶️ Resume";
-                        pauseResumeBtn.classList.remove("paused");
-                    }
                 }
             }, 2000);
         }
@@ -1100,77 +1089,6 @@ export class RepositoryVisualizationProvider {
                 .style("display", showLabels ? "block" : "none");
         });
 
-        // Pause/Resume button
-        let isPaused = false;
-        const pauseResumeBtn = document.getElementById("pause-resume");
-        pauseResumeBtn.addEventListener("click", () => {
-            if (!simulation) return;
-            
-            isPaused = !isPaused;
-            if (isPaused) {
-                // Stop and fix all positions
-                nodes.forEach(d => {
-                    if (d.depth === 0) {
-                        d.fx = centerX;
-                        d.fy = centerY;
-                    } else {
-                        d.fx = d.x;
-                        d.fy = d.y;
-                    }
-                });
-                simulation.stop();
-                pauseResumeBtn.textContent = "▶️ Resume";
-                pauseResumeBtn.classList.remove("paused");
-            } else {
-                // Unfix all nodes except root
-                nodes.forEach(d => {
-                    if (d.depth !== 0) {
-                        d.fx = null;
-                        d.fy = null;
-                    }
-                });
-                simulation.alpha(0.3).restart();
-                pauseResumeBtn.textContent = "⏸️ Pause";
-                pauseResumeBtn.classList.add("paused");
-            }
-        });
-
-        // Restart button
-        document.getElementById("restart").addEventListener("click", () => {
-            if (simulation) {
-                // Unfix all nodes except root
-                nodes.forEach(d => {
-                    if (d.depth === 0) {
-                        d.fx = centerX;
-                        d.fy = centerY;
-                    } else {
-                        d.fx = null;
-                        d.fy = null;
-                    }
-                });
-                // Restart simulation
-                simulation.alpha(1).restart();
-                
-                // Auto-stop after 2 seconds to freeze positions
-                setTimeout(() => {
-                    if (simulation) {
-                        nodes.forEach(d => {
-                            if (d.depth === 0) {
-                                d.fx = centerX;
-                                d.fy = centerY;
-                            } else {
-                                d.fx = d.x;
-                                d.fy = d.y;
-                            }
-                        });
-                        simulation.stop();
-                        pauseResumeBtn.textContent = "▶️ Resume";
-                        pauseResumeBtn.classList.remove("paused");
-                        isPaused = true;
-                    }
-                }, 2000);
-            }
-        });
 
         // Listen for messages from extension
         window.addEventListener("message", event => {
