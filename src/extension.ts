@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 import { FlowchartViewProvider } from "./view/FlowchartViewProvider";
 import { FlowchartPanelProvider } from "./view/FlowchartPanelProvider";
+import { RepositoryVisualizationProvider } from "./view/RepositoryVisualizationProvider";
+import { RepositoryDataCollector } from "./core/git/RepositoryDataCollector";
 import { initLanguageServices } from "./core/language-services";
 import { LLMManager } from "./core/llm/LLMManager";
 import { setExtensionContext } from "./core/llm/LLMContext";
@@ -205,10 +207,73 @@ export async function activate(context: vscode.ExtensionContext) {
         console.error("Error in resetCache:", error);
         vscode.window.showErrorMessage(`Failed to reset cache: ${error}`);
       }
-    })
+    }),
+
+    // Repository Visualization commands
+    vscode.commands.registerCommand("codevisualizer.openRepositoryVisualization", async () => {
+      console.log("Command codevisualizer.openRepositoryVisualization executed");
+      try {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+          vscode.window.showErrorMessage("No workspace folder open. Please open a workspace first.");
+          return;
+        }
+
+        const workspaceRoot = workspaceFolders[0].uri.fsPath;
+        
+        // Show loading message
+        vscode.window.showInformationMessage("Collecting repository data...", "Cancel");
+
+        // Collect repository data
+        const repositoryData = await RepositoryDataCollector.collectRepositoryData(workspaceRoot);
+        
+        if (!repositoryData) {
+          vscode.window.showErrorMessage("Failed to collect repository data.");
+          return;
+        }
+
+        // Create or show panel
+        const repoProvider = RepositoryVisualizationProvider.getInstance(
+          context.extensionUri
+        );
+        repoProvider.createOrShow(vscode.ViewColumn.Two, repositoryData);
+        
+        vscode.window.showInformationMessage("Repository visualization opened!");
+      } catch (error) {
+        console.error("Error in openRepositoryVisualization:", error);
+        vscode.window.showErrorMessage(`Failed to open repository visualization: ${error}`);
+      }
+    }),
+
+    vscode.commands.registerCommand("codevisualizer.refreshRepository", async () => {
+      console.log("Command codevisualizer.refreshRepository executed");
+      try {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+          vscode.window.showErrorMessage("No workspace folder open.");
+          return;
+        }
+
+        const workspaceRoot = workspaceFolders[0].uri.fsPath;
+        const repositoryData = await RepositoryDataCollector.collectRepositoryData(workspaceRoot);
+        
+        if (repositoryData) {
+          const repoProvider = RepositoryVisualizationProvider.getInstance(
+            context.extensionUri
+          );
+          repoProvider.updateRepositoryData(repositoryData);
+          vscode.window.showInformationMessage("Repository data refreshed!");
+        }
+      } catch (error) {
+        console.error("Error in refreshRepository:", error);
+        vscode.window.showErrorMessage(`Failed to refresh repository: ${error}`);
+      }
+    }),
+
   );
 }
 
 export function deactivate() {
   FlowchartPanelProvider.reset();
+  RepositoryVisualizationProvider.reset();
 }
