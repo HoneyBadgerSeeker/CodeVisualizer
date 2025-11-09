@@ -8,6 +8,12 @@ CodeVisualizer is a powerful VS Code extension that provides two main visualizat
 ![VS Code](https://img.shields.io/badge/VS%20Code-1.22.0+-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
 
+
+
+https://github.com/user-attachments/assets/b323bbc8-5c1d-4865-aa12-3235706a33fc
+
+
+
 ## Main Features
 
 ### 1. Function-Level Flowchart Generation
