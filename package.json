@@ -24,11 +24,8 @@
     "code analysis",
     "ast",
     "diagram",
-    "git",
-    "repository",
     "llm",
     "ai",
-    "version control",
     "code visualizer",
     "graph"
   ],
@@ -108,14 +105,9 @@
         "icon": "$(trash)"
       },
       {
-        "command": "codevisualizer.openRepositoryVisualization",
-        "title": "CodeVisualizer: Open Repository Visualization",
-        "icon": "$(folder-opened)"
-      },
-      {
-        "command": "codevisualizer.refreshRepository",
-        "title": "CodeVisualizer: Refresh Repository",
-        "icon": "$(refresh)"
+        "command": "codevisualizer.visualizeCodebase",
+        "title": "Visualize Codebase Flow",
+        "icon": "$(organization)"
       }
     ],
     "menus": {
@@ -168,6 +160,16 @@
         {
           "command": "codevisualizer.maximizeFlowchartPanel",
           "when": "editorTextFocus"
+        },
+        {
+          "command": "codevisualizer.visualizeCodebase"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "codevisualizer.visualizeCodebase",
+          "when": "explorerResourceIsFolder",
+          "group": "navigation@1"
         }
       ]
     },

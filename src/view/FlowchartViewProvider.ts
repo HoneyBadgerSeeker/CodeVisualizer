@@ -15,9 +15,6 @@ export class FlowchartViewProvider
   public static readonly viewType = "codevisualizer.flowchartView";
   private _view?: vscode.WebviewView;
 
-  /**
-   * Get available themes for configuration UI
-   */
   public static getAvailableThemes() {
     return SubtleThemeManager.getAvailableThemes();
   }
@@ -50,7 +47,6 @@ export class FlowchartViewProvider
   ) {
     this._view = webviewView;
     
-    // Use environment-aware webview options
     const baseOptions = {
       enableScripts: true,
       localResourceRoots: [this._extensionUri],
@@ -61,7 +57,6 @@ export class FlowchartViewProvider
     const delay = EnvironmentDetector.getInitializationDelay();
     
     const initializeView = () => {
-      // Set up event listeners (will only set up once due to the flag)
       this.setupEventListeners();
 
       // Handle messages from the webview
@@ -82,18 +77,13 @@ export class FlowchartViewProvider
     }
   }
 
-  /**
-   * Public method to refresh the sidebar content
-   */
+
   public refresh(): void {
     if (this._view) {
       this.forceUpdateView(vscode.window.activeTextEditor);
     }
   }
 
-  /**
-   * Override dispose to handle view cleanup
-   */
   public dispose(): void {
     this._view = undefined;
     super.dispose();

@@ -2,7 +2,7 @@
 
 **Real-time interactive flowcharts for your code with AI-powered insights**
 
-CodeVisualizer is a powerful VS Code extension that transforms your source code into beautiful, interactive flowcharts. It supports multiple programming languages, provides AI-powered label generation, and offers comprehensive repository visualization.
+CodeVisualizer is a powerful VS Code extension that transforms your source code into beautiful, interactive flowcharts. It supports multiple programming languages and provides AI-powered label generation.
 
 ![CodeVisualizer](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![VS Code](https://img.shields.io/badge/VS%20Code-1.22.0+-green.svg)
@@ -28,13 +28,6 @@ CodeVisualizer is a powerful VS Code extension that transforms your source code 
 - **Customizable Style**: Concise, explanatory, or technical label styles
 - **Multi-language Support**: Generate labels in your preferred language
 
-### Repository Visualization
-- **Interactive Tree View**: Force-directed graph visualization of your repository structure
-- **Code Metrics**: Lines of code, commits, contributors per file
-- **File Size Visualization**: Node size proportional to lines of code
-- **Directory Navigation**: Click to explore folder structure
-- **Git Integration**: View repository metrics and history
-
 ### Developer Experience
 - **Auto-refresh**: Automatically update flowcharts on code changes
 - **Performance Optimized**: Efficient parsing with Tree-sitter (WASM)
@@ -54,17 +47,6 @@ CodeVisualizer is a powerful VS Code extension that transforms your source code 
 3. **IR Generation**: Converts AST into an Intermediate Representation (IR) with nodes and edges
 4. **Visualization**: Generates Mermaid diagram code from IR
 5. **Rendering**: Renders interactive flowchart using Mermaid.js in webview
-
-### Repository Visualization
-
-1. **Data Collection**: Scans workspace directory structure
-2. **Metrics Calculation**: 
-   - Counts lines of code per file
-   - Calculates directory sizes (sum of children)
-   - Collects Git metrics (if available)
-3. **Tree Building**: Constructs hierarchical tree structure
-4. **Force-Directed Layout**: Uses D3.js force simulation for optimal node positioning
-5. **Interactive Rendering**: Renders nodes with size proportional to code volume
 
 ### AI Label Generation
 
@@ -90,12 +72,6 @@ CodeVisualizer is a powerful VS Code extension that transforms your source code 
 - Caching minimizes API calls and reduces data transmission
 - You can use local models (Ollama) for complete privacy
 - All AI features are **opt-in** and disabled by default
-
-**Repository Visualization:**
-- All file scanning happens **locally**
-- Git metrics are calculated locally (if Git is available)
-- No repository data is transmitted externally
-- File paths and structure remain on your machine
 
 ### What Data is Collected?
 
@@ -150,14 +126,6 @@ Then press F5 in VS Code to run the extension in a new window.
 - **Sidebar View**: Automatically appears in the CodeVisualizer sidebar
 - **Panel View**: Right-click → "Open Flowchart in New Window"
 - **Multiple Views**: Open flowcharts in different editor columns
-
-### Repository Visualization
-
-1. Open a workspace folder
-2. `Ctrl+Shift+P` → "CodeVisualizer: Open Repository Visualization"
-3. Explore your repository structure interactively
-4. Click files to open them in the editor
-5. Hover over nodes to see metrics
 
 ### AI Labels (Optional)
 
@@ -214,7 +182,6 @@ Then press F5 in VS Code to run the extension in a new window.
 ## Known Issues
 
 - Export functionality is currently in development
-- Git metrics use placeholder data (can be enhanced with `simple-git` package)
 - Large files (>10,000 lines) may take longer to parse
 
 ## Contributing
@@ -235,8 +202,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - **Tree-sitter**: For powerful AST parsing
 - **Mermaid.js**: For beautiful diagram rendering
-- **D3.js**: For repository visualization
-- **CodeFlower**: Inspiration for repository visualization approach
 
 ## Support
 

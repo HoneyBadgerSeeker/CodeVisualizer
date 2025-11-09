@@ -6,16 +6,10 @@ import {
   FlowchartViewContext,
 } from "./BaseFlowchartProvider";
 
-/**
- * Provider for flowchart panels (separate windows/tabs)
- */
 export class FlowchartPanelProvider extends BaseFlowchartProvider {
   private _panel?: vscode.WebviewPanel;
   private static _instance?: FlowchartPanelProvider;
 
-  /**
-   * Get the singleton instance of the panel provider
-   */
   public static getInstance(extensionUri: vscode.Uri): FlowchartPanelProvider {
     if (!FlowchartPanelProvider._instance) {
       FlowchartPanelProvider._instance = new FlowchartPanelProvider(
@@ -25,9 +19,6 @@ export class FlowchartPanelProvider extends BaseFlowchartProvider {
     return FlowchartPanelProvider._instance;
   }
 
-  /**
-   * Reset the singleton instance (used for cleanup)
-   */
   public static reset(): void {
     if (FlowchartPanelProvider._instance) {
       FlowchartPanelProvider._instance.dispose();
@@ -52,25 +43,19 @@ export class FlowchartPanelProvider extends BaseFlowchartProvider {
     };
   }
 
-  /**
-   * Create or show the flowchart panel with enhanced detached window experience
-   */
+
   public createOrShow(
     viewColumn?: vscode.ViewColumn,
     moveToNewWindow: boolean = false
   ): void {
-    // If panel already exists, just reveal it and update if needed
     if (this._panel) {
       this._panel.reveal(viewColumn);
       if (moveToNewWindow) {
         this.moveToNewWindow();
       }
-      // Force an update to ensure the panel shows current content
       this.forceUpdateView(vscode.window.activeTextEditor);
       return;
     }
-
-    // Get configuration for panel settings
     const config = vscode.workspace.getConfiguration("codevisualizer");
     const defaultPosition = config.get<string>("panel.defaultPosition", "two");
     const retainWhenHidden = config.get<boolean>(
@@ -82,7 +67,6 @@ export class FlowchartPanelProvider extends BaseFlowchartProvider {
       true
     );
 
-    // Map string position to ViewColumn
     const getViewColumn = (position: string): vscode.ViewColumn => {
       switch (position) {
         case "beside":
@@ -97,19 +81,19 @@ export class FlowchartPanelProvider extends BaseFlowchartProvider {
 
     const finalViewColumn = viewColumn || getViewColumn(defaultPosition);
 
-    // Create the panel with enhanced options for better detached experience
+
     const baseOptions = {
       enableScripts: true,
       localResourceRoots: [this._extensionUri],
       retainContextWhenHidden: retainWhenHidden,
       enableFindWidget: enableFindWidget,
-      // Enable command URIs for better interaction
+
       enableCommandUris: true,
     };
     
     this._panel = vscode.window.createWebviewPanel(
       "codevisualizer.flowchartPanel",
-      "🔍 Flowchart Viewer", // More distinctive title
+      "🔍 Flowchart Viewer", 
       finalViewColumn,
       EnvironmentDetector.getWebviewPanelOptions(baseOptions)
     );
@@ -120,7 +104,6 @@ export class FlowchartPanelProvider extends BaseFlowchartProvider {
       dark: vscode.Uri.joinPath(this._extensionUri, "media", "icon.png"),
     };
 
-    // Handle panel disposal
     this._panel.onDidDispose(
       () => {
         this._panel = undefined;
@@ -131,13 +114,10 @@ export class FlowchartPanelProvider extends BaseFlowchartProvider {
       this._disposables
     );
 
-    // Handle panel state changes - ensure updates when panel becomes active
     this._panel.onDidChangeViewState(
       (e) => {
         if (e.webviewPanel.active) {
-          // Update title and force a view update when panel becomes active
           this.updateTitle();
-          // Use setTimeout to ensure proper timing
           setTimeout(() => {
             this.forceUpdateView(vscode.window.activeTextEditor);
           }, 50);
@@ -147,20 +127,16 @@ export class FlowchartPanelProvider extends BaseFlowchartProvider {
       this._disposables
     );
 
-    // Handle messages from the webview
     this._panel.webview.onDidReceiveMessage(
       (message: WebviewMessage) => this.handleWebviewMessage(message),
       null,
       this._disposables
     );
 
-    // Set up event listeners
     this.setupEventListeners();
 
-    // Initial update
     this.updateView(vscode.window.activeTextEditor);
 
-    // Move to new window if requested
     if (moveToNewWindow) {
       // Use setTimeout to ensure the panel is fully created before moving
       setTimeout(() => {
@@ -168,7 +144,6 @@ export class FlowchartPanelProvider extends BaseFlowchartProvider {
       }, 100);
     }
 
-    // Show a helpful notification
     const message = moveToNewWindow
       ? "Flowchart opened in new window! Use Cmd+W to close or drag to reposition."
       : "Flowchart opened in detachable panel! You can drag this tab to split views or different positions.";
@@ -176,24 +151,16 @@ export class FlowchartPanelProvider extends BaseFlowchartProvider {
     vscode.window.showInformationMessage(message, "Got it");
   }
 
-  /**
-   * Check if the panel is currently visible
-   */
   public isVisible(): boolean {
     return this._panel?.visible ?? false;
   }
 
-  /**
-   * Move the panel to a new window (attempts to use VS Code's built-in commands)
-   */
   private async moveToNewWindow(): Promise<void> {
     if (!this._panel) {
       return;
     }
 
     try {
-      // Try to move the active tab to a new window
-      // VS Code has built-in commands for this
       await vscode.commands.executeCommand(
         "workbench.action.moveEditorToNewWindow"
       );
@@ -207,23 +174,15 @@ export class FlowchartPanelProvider extends BaseFlowchartProvider {
     }
   }
 
-  /**
-   * Close/hide the sidebar flowchart view to avoid duplication
-   */
   public static async closeSidebarView(): Promise<void> {
     try {
-      // Try to hide the sidebar view if it exists
-      // Note: There's no direct command to hide a specific sidebar view,
-      // so we'll just continue - the panel will show on top anyway
+
       console.log("Attempting to close sidebar view");
     } catch (error) {
       console.warn("Could not close sidebar view:", error);
     }
   }
 
-  /**
-   * Update the panel title based on the current file
-   */
   public updateTitle(fileName?: string): void {
     if (this._panel) {
       const title = fileName
@@ -233,9 +192,6 @@ export class FlowchartPanelProvider extends BaseFlowchartProvider {
     }
   }
 
-  /**
-   * Override updateView to also update the title
-   */
   public async updateView(
     editor: vscode.TextEditor | undefined
   ): Promise<void> {
@@ -252,18 +208,12 @@ export class FlowchartPanelProvider extends BaseFlowchartProvider {
     await super.updateView(editor);
   }
 
-  /**
-   * Public method to refresh the panel content (useful for external triggers)
-   */
   public refresh(): void {
     if (this._panel) {
       this.forceUpdateView(vscode.window.activeTextEditor);
     }
   }
 
-  /**
-   * Dispose of the panel and clean up resources
-   */
   public dispose(): void {
     if (this._panel) {
       this._panel.dispose();

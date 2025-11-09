@@ -52,10 +52,12 @@ export class EnhancedMermaidGenerator {
    */
   private generateEdgeMetadata(ir: FlowchartIR): Map<string, {source: string, target: string}> {
     const edgeMap = new Map<string, {source: string, target: string}>();
+    const isHashedId = (id: string) => /^N[0-9A-Z]+$/.test(id);
     
     for (const edge of ir.edges) {
-      const sanitizedFrom = this.sanitizeId(edge.from);
-      const sanitizedTo = this.sanitizeId(edge.to);
+      // Use IDs as-is if already hashed, otherwise sanitize
+      const sanitizedFrom = isHashedId(edge.from) ? edge.from : this.sanitizeId(edge.from);
+      const sanitizedTo = isHashedId(edge.to) ? edge.to : this.sanitizeId(edge.to);
       const edgeId = `${sanitizedFrom}_${sanitizedTo}`;
       
       // Store both source and target
@@ -80,12 +82,23 @@ export class EnhancedMermaidGenerator {
     }
 
     // Apply sanitization to all IDs first to ensure consistency
+    // BUT: If IDs are already hashed (like from CodebaseGraphBuilder), don't re-sanitize
+    // Check if IDs look like hashed IDs (start with 'N' followed by base36 chars)
+    const isHashedId = (id: string) => /^N[0-9A-Z]+$/.test(id);
+    
     for (const node of ir.nodes) {
-        node.id = this.sanitizeId(node.id);
+        // Only sanitize if not already hashed
+        if (!isHashedId(node.id)) {
+            node.id = this.sanitizeId(node.id);
+        }
     }
     for (const edge of ir.edges) {
-        edge.from = this.sanitizeId(edge.from);
-        edge.to = this.sanitizeId(edge.to);
+        if (!isHashedId(edge.from)) {
+            edge.from = this.sanitizeId(edge.from);
+        }
+        if (!isHashedId(edge.to)) {
+            edge.to = this.sanitizeId(edge.to);
+        }
     }
 
     // Generate nodes efficiently
