@@ -211,39 +211,6 @@
           "default": true,
           "description": "Automatically refresh flowchart when code changes"
         },
-        "codevisualizer.complexity.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable cyclomatic complexity analysis and display"
-        },
-        "codevisualizer.complexity.displayInNodes": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show complexity indicators directly on flowchart nodes"
-        },
-        "codevisualizer.complexity.displayInPanel": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show complexity information in the dedicated panel"
-        },
-        "codevisualizer.complexity.thresholds.low": {
-          "type": "number",
-          "default": 5,
-          "minimum": 1,
-          "description": "Upper threshold for low complexity (1 to this value)"
-        },
-        "codevisualizer.complexity.thresholds.medium": {
-          "type": "number",
-          "default": 10,
-          "minimum": 2,
-          "description": "Upper threshold for medium complexity"
-        },
-        "codevisualizer.complexity.thresholds.high": {
-          "type": "number",
-          "default": 20,
-          "minimum": 3,
-          "description": "Upper threshold for high complexity (above this is very high)"
-        },
         "codevisualizer.panel.defaultPosition": {
           "type": "string",
           "enum": [
