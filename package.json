@@ -1,7 +1,7 @@
 {
   "name": "codevisualizer",
   "displayName": "CodeVisualizer",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "publisher": "Duc Pham Ngoc",
   "description": "Real-time interactive flowcharts for your code with AI-powered insights",
   "repository": {
@@ -23,7 +23,14 @@
     "visualization",
     "code analysis",
     "ast",
-    "diagram"
+    "diagram",
+    "git",
+    "repository",
+    "llm",
+    "ai",
+    "version control",
+    "code visualizer",
+    "graph"
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
