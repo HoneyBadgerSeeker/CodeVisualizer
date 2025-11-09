@@ -8,6 +8,9 @@
     "type": "git",
     "url": "https://github.com/DucPhamNgoc08/CodeVisualizer.git"
   },
+  "engines": {
+    "vscode": "^1.22.0"
+  },
   "icon": "media/icon.png",
   "categories": [
     "Visualization",
@@ -96,6 +99,16 @@
         "command": "codevisualizer.llm.resetCache",
         "title": "CodeVisualizer: Reset AI Cache",
         "icon": "$(trash)"
+      },
+      {
+        "command": "codevisualizer.openRepositoryVisualization",
+        "title": "CodeVisualizer: Open Repository Visualization",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "codevisualizer.refreshRepository",
+        "title": "CodeVisualizer: Refresh Repository",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
