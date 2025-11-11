@@ -235,10 +235,12 @@ async function callProvider(
   labels: string[]
 ): Promise<string[] | null> {
   const { provider, model, apiKey, style, language, baseUrl } = params;
+  const expectedCount = labels.length;
 
   // IMPROVED PROMPTING
-  const systemPrompt = "You are a highly constrained JSON-only API. Your sole function is to process an array of strings and return a new JSON array of strings. You will never include conversational text, markdown, or code fences. Your output is always a valid JSON array of strings, with no other content.";
-  
+  const systemPrompt =
+    "You are a highly constrained JSON-only API. Your sole function is to process an array of strings and return a new JSON array of strings. You will never include conversational text, markdown, or code fences. Your output is always a valid JSON array of strings, with no other content.";
+
   const userPrompt = [
     "Task: Paraphrase each label into natural language.",
     "Rules:",
@@ -250,19 +252,47 @@ async function callProvider(
     `6. Target Style: ${style || "concise"}.`,
     `7. Target Language: ${language || "English"}.`,
     "Here is the array of labels to process:",
-    JSON.stringify(labels)
+    JSON.stringify(labels),
   ].join("\n");
 
   try {
     switch (provider) {
       case "openai":
-        return await callOpenAI(model, apiKey, systemPrompt, userPrompt);
+        return await callOpenAI(
+          model,
+          apiKey,
+          systemPrompt,
+          userPrompt,
+          expectedCount,
+          labels
+        );
       case "gemini":
-        return await callGemini(model, apiKey, systemPrompt, userPrompt);
+        return await callGemini(
+          model,
+          apiKey,
+          systemPrompt,
+          userPrompt,
+          expectedCount,
+          labels
+        );
       case "groq":
-        return await callGroq(model, apiKey, systemPrompt, userPrompt);
+        return await callGroq(
+          model,
+          apiKey,
+          systemPrompt,
+          userPrompt,
+          expectedCount,
+          labels
+        );
       case "ollama":
-        return await callOllama(model, baseUrl, systemPrompt, userPrompt);
+        return await callOllama(
+          model,
+          baseUrl,
+          systemPrompt,
+          userPrompt,
+          expectedCount,
+          labels
+        );
     }
   } catch (e) {
     logError(`LLM call failed for provider ${provider}: ${e}`);
@@ -311,23 +341,93 @@ function isGeminiGenerateContentResponse(x: unknown): x is GeminiGenerateContent
   return true;
 }
 
-function parseLabelsJsonText(text: string): string[] | null {
+function parseLabelsJsonText(
+  text: string,
+  expectedCount: number,
+  referenceLabels?: string[]
+): string[] | null {
   try {
-    let parsed = JSON.parse(text);
-    if (Array.isArray(parsed)) {
-      return parsed.map((s) => String(s));
+    const parsed = JSON.parse(text) as unknown;
+
+    const tryArray = (value: unknown): unknown[] | null => {
+      if (!value) return null;
+      if (Array.isArray(value)) return value;
+      if (typeof value === "object") {
+        const obj = value as Record<string, unknown>;
+        if (Array.isArray(obj.labels)) return obj.labels;
+        if (Array.isArray(obj.result)) return obj.result;
+
+        if (referenceLabels && referenceLabels.length > 0) {
+          const normalizedMap = new Map<string, string>();
+          for (const [key, val] of Object.entries(obj)) {
+            if (val === undefined || val === null) continue;
+            normalizedMap.set(normalizeKey(key), String(val));
+          }
+          const ordered: string[] = [];
+          let allFound = true;
+          for (const ref of referenceLabels) {
+            const match =
+              normalizedMap.get(normalizeKey(ref)) ??
+              normalizedMap.get(normalizeKey(sanitizeLabel(ref)));
+            if (match !== undefined) {
+              ordered.push(match);
+            } else {
+              allFound = false;
+              break;
+            }
+          }
+          if (allFound && ordered.length > 0) {
+            return ordered;
+          }
+        }
+
+        const values = Object.values(obj);
+        if (values.length > 0) return values;
+      }
+      return null;
+    };
+
+    const arr = tryArray(parsed);
+    if (!arr) {
+      logWarn(
+        `JSON parsed but not an array. Value: ${JSON.stringify(parsed).substring(
+          0,
+          500
+        )}`
+      );
+      return null;
     }
-    // Some models might incorrectly wrap the array in an object
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      Array.isArray((parsed as { labels?: unknown }).labels)
-    ) {
-      return (parsed as { labels: unknown[] }).labels.map((s) => String(s));
+
+    let strings = arr.map((item) => String(item));
+    if (strings.length !== expectedCount) {
+      logWarn(
+        `Parsed ${strings.length} labels but expected ${expectedCount}. Adjusting.`
+      );
+      if (strings.length > expectedCount) {
+        strings = strings.slice(0, expectedCount);
+      }
     }
+    return strings;
+  } catch (err) {
+    logWarn(
+      `Failed to parse labels JSON. Raw text: ${text.substring(
+        0,
+        500
+      )} Error: ${err instanceof Error ? err.message : String(err)}`
+    );
     return null;
+  }
+}
+
+function normalizeKey(input: string): string {
+  return sanitizeLabel(input).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+async function safeReadBody(res: Response): Promise<string> {
+  try {
+    return await res.text();
   } catch {
-    return null;
+    return "<could not read body>";
   }
 }
 
@@ -337,33 +437,65 @@ async function callOpenAI(
   apiKey: string,
   systemPrompt: string,
   userPrompt: string,
+  expectedCount: number,
+  referenceLabels: string[],
 ): Promise<string[] | null> {
   try {
+    const bodyPayload = {
+      model,
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+    };
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model,
-        temperature: 0.2,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
+      body: JSON.stringify(bodyPayload),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const text = await safeReadBody(res);
+      logWarn(
+        `OpenAI responded with ${res.status} ${res.statusText}. Body snippet: ${text.substring(
+          0,
+          500
+        )}`
+      );
+      return null;
+    }
     const data: unknown = await res.json();
-    if (!isOpenAIChatCompletionResponse(data)) return null;
+    if (!isOpenAIChatCompletionResponse(data)) {
+      logWarn(
+        `OpenAI response shape unexpected: ${JSON.stringify(data).substring(
+          0,
+          500
+        )}`
+      );
+      return null;
+    }
     const content: string | undefined =
       data.choices && data.choices[0] && data.choices[0].message
         ? data.choices[0].message.content
         : undefined;
-    if (!content) return null;
-    return parseLabelsJsonText(content);
+    if (!content) {
+      logWarn("OpenAI response did not contain message content");
+      return null;
+    }
+    const parsed = parseLabelsJsonText(content, expectedCount, referenceLabels);
+    if (!parsed) {
+      logWarn(
+        `OpenAI output could not be parsed as JSON array. Content: ${content.substring(
+          0,
+          500
+        )}`
+      );
+    }
+    return parsed;
   } catch (err) {
     logError(
       `OpenAI fetch error: ${err instanceof Error ? err.message : String(err)}`,
@@ -377,6 +509,8 @@ async function callGemini(
   apiKey: string,
   systemPrompt: string,
   userPrompt: string,
+  expectedCount: number,
+  referenceLabels: string[],
 ): Promise<string[] | null> {
   try {
     const res = await fetch(
@@ -396,19 +530,48 @@ async function callGemini(
         }),
       },
     );
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const text = await safeReadBody(res);
+      logWarn(
+        `Gemini responded with ${res.status} ${res.statusText}. Body snippet: ${text.substring(
+          0,
+          500
+        )}`
+      );
+      return null;
+    }
     const data: unknown = await res.json();
-    if (!isGeminiGenerateContentResponse(data)) return null;
+    if (!isGeminiGenerateContentResponse(data)) {
+      logWarn(
+        `Gemini response shape unexpected: ${JSON.stringify(data).substring(
+          0,
+          500
+        )}`
+      );
+      return null;
+    }
     const first = data.candidates && data.candidates[0];
     const text: string | undefined =
       first && first.content && first.content.parts && first.content.parts[0]
         ? first.content.parts[0].text
         : undefined;
-    if (!text) return null;
+    if (!text) {
+      logWarn("Gemini response did not contain text content");
+      return null;
+    }
     // Gemini might produce text like `Here's the list: ["a", "b"]`. We need to extract the JSON.
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     const jsonString = jsonMatch ? jsonMatch[0] : text;
-    return parseLabelsJsonText(jsonString);
+    const parsed = parseLabelsJsonText(jsonString, expectedCount, referenceLabels);
+    if (!parsed) {
+      logWarn(
+        `Gemini output could not be parsed as JSON array. Content: ${jsonString.substring(
+          0,
+          500
+        )}`
+      );
+    }
+    return parsed;
   } catch (err) {
     logError(
       `Gemini fetch error: ${err instanceof Error ? err.message : String(err)}`,
@@ -422,6 +585,8 @@ async function callGroq(
   apiKey: string,
   systemPrompt: string,
   userPrompt: string,
+  expectedCount: number,
+  referenceLabels: string[],
 ): Promise<string[] | null> {
   const url = "https://api.groq.com/openai/v1/chat/completions";
   const body = {
@@ -448,15 +613,44 @@ async function callGroq(
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const text = await safeReadBody(res);
+      logWarn(
+        `Groq responded with ${res.status} ${res.statusText}. Body snippet: ${text.substring(
+          0,
+          500
+        )}`
+      );
+      return null;
+    }
     const data: unknown = await res.json();
-    if (!isOpenAIChatCompletionResponse(data)) return null;
+    if (!isOpenAIChatCompletionResponse(data)) {
+      logWarn(
+        `Groq response shape unexpected: ${JSON.stringify(data).substring(
+          0,
+          500
+        )}`
+      );
+      return null;
+    }
     const content: string | undefined =
       data.choices && data.choices[0] && data.choices[0].message
         ? data.choices[0].message.content
         : undefined;
-    if (!content) return null;
-    return parseLabelsJsonText(content);
+    if (!content) {
+      logWarn("Groq response did not contain message content");
+      return null;
+    }
+    const parsed = parseLabelsJsonText(content, expectedCount, referenceLabels);
+    if (!parsed) {
+      logWarn(
+        `Groq output could not be parsed as JSON array. Content: ${content.substring(
+          0,
+          500
+        )}`
+      );
+    }
+    return parsed;
   } catch (err) {
     logError(
       `Groq fetch error: ${err instanceof Error ? err.message : String(err)}`,
@@ -486,9 +680,12 @@ async function callOllama(
   model: string,
   baseUrl: string | undefined,
   systemPrompt: string,
-  userPrompt: string
+  userPrompt: string,
+  expectedCount: number,
+  referenceLabels: string[],
 ): Promise<string[] | null> {
-  const urlBase = baseUrl && baseUrl.trim() ? baseUrl.trim().replace(/\/$/, "") : "http://localhost:11434";
+  const urlBase =
+    baseUrl && baseUrl.trim() ? baseUrl.trim().replace(/\/$/, "") : "http://localhost:11434";
   const url = `${urlBase}/api/chat`;
   const body = {
     model,
@@ -500,9 +697,10 @@ async function callOllama(
     stream: false,
   };
   logInfo(
-    `Ollama label-array request: base=${urlBase} model=${model} body=${JSON.stringify(
-      body
-    ).slice(0, 2000)}`
+    `Ollama label-array request: base=${urlBase} model=${model} body=${JSON.stringify(body).slice(
+      0,
+      2000
+    )}`
   );
   let res: Response;
   try {
@@ -517,15 +715,41 @@ async function callOllama(
     );
     return null;
   }
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const text = await safeReadBody(res);
+    logWarn(
+      `Ollama responded with ${res.status} ${res.statusText}. Body snippet: ${text.substring(
+        0,
+        500
+      )}`
+    );
+    return null;
+  }
   const data: unknown = await res.json();
-  if (!isOllamaChatResponse(data)) return null;
+  if (!isOllamaChatResponse(data)) {
+    logWarn(
+      `Ollama response shape unexpected: ${JSON.stringify(data).substring(0, 500)}`
+    );
+    return null;
+  }
   const content: string | undefined = (data as OllamaChatResponse).message?.content;
-  if (!content) return null;
+  if (!content) {
+    logWarn("Ollama response did not contain message content");
+    return null;
+  }
   // Ollama might produce text like `Here is the JSON: ["a", "b"]`. We need to extract the JSON.
   const jsonMatch = content.match(/\[[\s\S]*\]/);
   const jsonString = jsonMatch ? jsonMatch[0] : content;
-  return parseLabelsJsonText(jsonString);
+  const parsed = parseLabelsJsonText(jsonString, expectedCount, referenceLabels);
+  if (!parsed) {
+    logWarn(
+      `Ollama output could not be parsed as JSON array. Content: ${jsonString.substring(
+        0,
+        500
+      )}`
+    );
+  }
+  return parsed;
 }
 
 // -------------------- Groq: full Mermaid rewrite path --------------------
@@ -632,10 +856,14 @@ async function callGroqRewriteMermaid(params: TranslateParams): Promise<string |
       "Groq response did not contain a valid Mermaid graph; attempting fallback label replacement."
     );
     // Fallback: try to extract labels JSON from message and rebuild
-    const labels = parseLabelsJsonText(content);
+    const extraction = extractNodeLabels(params.mermaidSource);
+    const labels = parseLabelsJsonText(
+      content,
+      extraction.labels.length,
+      extraction.labels
+    );
     if (labels && labels.length > 0) {
       try {
-        const extraction = extractNodeLabels(params.mermaidSource);
         if (extraction.labels.length === labels.length) {
           return replaceNodeLabels(params.mermaidSource, extraction, labels);
         }

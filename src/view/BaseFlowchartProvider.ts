@@ -1299,6 +1299,20 @@ export abstract class BaseFlowchartProvider {
                 };
             }
             setLLMButton(INITIAL_LLM);
+
+            // Auto-apply LLM labels if previously enabled and available
+            try {
+                const persistedLLM = localStorage.getItem('codevisualizer-llm-enabled') === 'true';
+                if (INITIAL_LLM && INITIAL_LLM.enabled && persistedLLM) {
+                    isLLMEnabled = true;
+                    // Defer the request slightly to allow initial render to complete
+                    setTimeout(() => {
+                        vscode.postMessage({ command: 'requestLLMLabels', payload: {} });
+                    }, 200);
+                }
+            } catch (err) {
+                console.warn('[CodeVisualizer] Unable to read LLM persisted state:', err);
+            }
         </script>
     </body>
     </html>`;

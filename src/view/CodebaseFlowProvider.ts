@@ -30,15 +30,16 @@ export class CodebaseFlowProvider {
     }
 
     // Create new panel
+    const baseOptions = {
+      enableScripts: true,
+      localResourceRoots: [this._extensionUri],
+      retainContextWhenHidden: true,
+    };
     this._panel = vscode.window.createWebviewPanel(
       "codevisualizer.codebaseFlow",
       "Codebase Flow",
       viewColumn,
-      {
-        enableScripts: true,
-        localResourceRoots: [this._extensionUri],
-        retainContextWhenHidden: true,
-      }
+      EnvironmentDetector.getWebviewPanelOptions(baseOptions)
     );
     
     this._panel.onDidDispose(
