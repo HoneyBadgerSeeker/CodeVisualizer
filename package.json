@@ -1,8 +1,8 @@
 {
   "name": "codevisualizer",
   "displayName": "CodeVisualizer",
-  "version": "1.0.3",
-  "publisher": "DucPhamNgoc",
+  "version": "1.0.5",
+  "publisher": "ducphamngoc",
   "description": "Real-time interactive flowcharts for your code with AI-powered insights",
   "repository": {
     "type": "git",
